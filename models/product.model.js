@@ -18,7 +18,8 @@ const ProductInfoSchema=mongoose.Schema({
     },
     image:{
         type:String
-    }
+    },
+    imagePublicId: { type: String }, 
 }, {timestamp:true})
 
 

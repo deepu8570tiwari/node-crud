@@ -1,9 +1,10 @@
 const express=require("express");
 const routes=express.Router();
+const { upload } = require("../config/cloudinary"); 
 const {createProducts,getAllProducts,getSingleProducts,updateProducts,deleteProducts}=require("../controllers/productInfoController");
-routes.post("/",createProducts);
+routes.post("/",upload.single("image"),createProducts);
 routes.get("/", getAllProducts);
 routes.get("/:id", getSingleProducts);
-routes.put("/:id", updateProducts);
+routes.put("/:id", upload.single("image"),updateProducts);
 routes.delete("/:id", deleteProducts);
 module.exports=routes;

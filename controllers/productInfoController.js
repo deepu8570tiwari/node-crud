@@ -1,9 +1,21 @@
 const mongoose=require("mongoose");
 const ProductInfo=require("../models/product.model");
+const { cloudinary } = require("../config/cloudinary");
 const createProducts=async(req, res)=>{
     try {
-        const productCreated=await ProductInfo.create(req.body);
-        res.status(200).json({message:"Product Created Successfully", data: productCreated})
+        const {name, description, price, quantity}=req.body;
+        if(!req.file){
+            return res.status(400).json({message:"Image is required"});
+        }
+        const productCreated=await ProductInfo.create({
+            name,
+            description,
+            price,
+            quantity,
+            image:req.file.path,
+            imagePublicId:req.file.filename
+        });
+        res.status(201).json({message:"Product Created Successfully", data: productCreated})
     } catch (error) {
         res.status(500).json({message:error.message});
     }
@@ -17,18 +29,43 @@ const getAllProducts=async(req, res)=>{
     }
 }
 const getSingleProducts=async(req, res)=>{
-    try {
-        const {id}=req.params;
-        const getSingleProducts=await ProductInfo.find(id);
-        res.status(200).json({message:"List of single product", data: getSingleProducts})
+       try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid product id" });
+        }
+
+        const findProductInfo = await ProductInfo.findById(id);
+
+        if (!findProductInfo) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        return res.status(200).json({
+            message: "Single product found",
+            data: findProductInfo
+        });
+
     } catch (error) {
-        res.status(500).json({message:error.message});
+        return res.status(500).json({ message: error.message });
     }
 }
 const updateProducts=async(req, res)=>{
     try {
         const {id}=req.params;
-        const updateProduct=await ProductInfo.findByIdAndUpdate(id, req.body,{new : true});
+        let updateData = { ...req.body };
+        const product=await ProductInfo.findById(id);
+        if(!product){
+            return res.status(404).json({message:"Product not found"});
+        }
+        if(req.file){
+            if(product.imagePublicId){
+                await cloudinary.uploader.destroy(product.imagePublicId);
+            }
+            updateData.image = req.file.path;
+            updateData.imagePublicId = req.file.filename;
+        }
+        const updateProduct=await ProductInfo.findByIdAndUpdate(id, updateData,{new : true, runValidators: true,},);
         res.status(200).json({message:"Updated Product", data: updateProduct})
     } catch (error) {
         res.status(500).json({message:error.message});
@@ -37,7 +74,7 @@ const updateProducts=async(req, res)=>{
 const deleteProducts=async(req, res)=>{
     try {
         const {id}=req.params;
-        const findProductInfo=ProductInfo.findById(id);
+        const findProductInfo=await ProductInfo.findById(id);
         if(!findProductInfo){
             res.status(404).json({message:"Product not found"});
         }
